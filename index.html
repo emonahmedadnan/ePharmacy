@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>epharmacy - Bangladesh's Smart Online Pharmacy & Telehealth</title>
+    <meta name="description" content="Arogga-style online pharmacy & digital healthcare in Bangladesh with real-time stock updates, live delivery tracking, prescription upload, voice search, medication reminders, doctor video consultation, monthly subscriptions, and bKash/Nagad payments." />
+    <meta property="og:title" content="epharmacy - Bangladesh's Smart Online Pharmacy & Telehealth" />
+    <meta property="og:description" content="Arogga-style online pharmacy & digital healthcare in Bangladesh with real-time stock updates, live delivery tracking, prescription upload, voice search, medication reminders, doctor video consultation, monthly subscriptions, and bKash/Nagad payments." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function() {
+        try {
+          var _origFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
+          var _currentFetch = _origFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(fn) {
+              _currentFetch = typeof fn === 'function' ? fn : _origFetch;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            var _protoFetch = typeof Window.prototype.fetch === 'function' ? Window.prototype.fetch.bind(window) : null;
+            var _currentProto = _protoFetch;
+            Object.defineProperty(Window.prototype, 'fetch', {
+              get: function() {
+                return _currentProto;
+              },
+              set: function(fn) {
+                _currentProto = typeof fn === 'function' ? fn : _protoFetch;
+              },
+              configurable: true,
+              enumerable: true
+            });
+          } catch (err) {}
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased font-['Hind_Siliguri','SolaimanLipi','Plus_Jakarta_Sans',sans-serif]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

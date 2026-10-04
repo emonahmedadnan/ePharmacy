@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    font-family: 'Hind Siliguri', 'SolaimanLipi', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}

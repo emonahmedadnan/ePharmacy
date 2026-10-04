@@ -1,0 +1,11 @@
+{
+  "name": "epharmacy - Bangladesh's Smart Online Pharmacy & Telehealth",
+  "description": "Arogga-style online pharmacy & digital healthcare in Bangladesh with real-time stock updates, live delivery tracking, prescription upload, voice search, medication reminders, doctor video consultation, monthly subscriptions, and bKash/Nagad payments.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
