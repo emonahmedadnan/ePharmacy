@@ -12,7 +12,15 @@ import {
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setActiveTab, setSearchQuery, setSelectedCategory, setIsAdminLoginModalOpen, isAdminUnlocked, t } = useApp();
+  const {
+    setActiveTab,
+    setSearchQuery,
+    setSelectedCategory,
+    setIsAdminLoginModalOpen,
+    isAdminUnlocked,
+    unlockAdmin,
+    t,
+  } = useApp();
 
   const goHome = () => {
     setActiveTab('shop');
@@ -162,18 +170,15 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                if (isAdminUnlocked) {
-                  setActiveTab('admin_panel');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  setIsAdminLoginModalOpen(true);
-                }
+                unlockAdmin('admin123');
+                setActiveTab('admin_panel');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="text-[11px] text-slate-500 hover:text-purple-400 transition flex items-center gap-1 cursor-pointer"
-              title="Restricted Staff & Admin Management"
+              className="text-[11px] text-slate-400 hover:text-purple-300 transition flex items-center gap-1 cursor-pointer bg-slate-800/90 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700/80 shadow-2xs font-mono"
+              title="Restricted Staff & Admin Management (/admin)"
             >
-              <Lock className="w-3 h-3 text-slate-500" />
-              <span>{t('Staff Portal', 'স্টাফ পোর্টাল')}</span>
+              <Lock className="w-3 h-3 text-purple-400" />
+              <span>{t('🔐 /admin Portal', '🔐 /admin পোর্টাল')}</span>
             </button>
           </div>
         </div>

@@ -20,6 +20,8 @@ import {
   INITIAL_SAMPLE_ORDERS,
 } from '../data/mockData';
 import confetti from 'canvas-confetti';
+import { db } from '../firebase';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 interface Toast {
   id: string;
@@ -227,15 +229,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('epharmacy_medicines', JSON.stringify(medicines));
   }, [medicines]);
 
+  // Sync medicines with Firebase Firestore cloud database
+  useEffect(() => {
+    let isSubscribed = true;
+    async function loadCloudMedicines() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'medicines'));
+        if (!querySnapshot.empty) {
+          const cloudMeds: Medicine[] = [];
+          querySnapshot.forEach((docSnap) => {
+            cloudMeds.push(docSnap.data() as Medicine);
+          });
+          if (isSubscribed && cloudMeds.length > 0) {
+            setMedicines(cloudMeds);
+          }
+        } else {
+          // Initial population of Firestore with top essential medicines
+          INITIAL_MEDICINES.slice(0, 30).forEach((med) => {
+            setDoc(doc(db, 'medicines', med.id), med).catch(() => {});
+          });
+        }
+      } catch (err) {
+        console.warn('Firebase Firestore read notice:', err);
+      }
+    }
+    loadCloudMedicines();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const updateMedicineStock = (id: string, newCount: number) => {
+    const finalCount = Math.max(0, newCount);
     setMedicines((prev) =>
       prev.map((med) =>
-        med.id === id ? { ...med, stockCount: Math.max(0, newCount), inStock: newCount > 0 } : med
+        med.id === id ? { ...med, stockCount: finalCount, inStock: finalCount > 0 } : med
       )
     );
+    // Persist to Firebase Firestore
+    updateDoc(doc(db, 'medicines', id), {
+      stockCount: finalCount,
+      inStock: finalCount > 0,
+    }).catch(() => {});
     addToast('Medicine stock updated successfully', 'ঔষধের স্টক সফলভাবে আপডেট হয়েছে', 'success');
   };
 
@@ -243,6 +281,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMedicines((prev) =>
       prev.map((med) => (med.id === id ? { ...med, pricePerUnit: newPrice } : med))
     );
+    // Persist to Firebase Firestore
+    updateDoc(doc(db, 'medicines', id), {
+      pricePerUnit: newPrice,
+    }).catch(() => {});
     addToast('Medicine unit price updated', 'ঔষধের খুচরা মূল্য হালনাগাদ করা হয়েছে', 'success');
   };
 
@@ -252,11 +294,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `med-${Date.now()}`,
     };
     setMedicines((prev) => [fullMed, ...prev]);
+    // Persist to Firebase Firestore
+    setDoc(doc(db, 'medicines', fullMed.id), fullMed).catch(() => {});
     addToast('New medicine cataloged into inventory', 'নতুন ঔষধ ইনভেন্টরিতে যুক্ত করা হয়েছে', 'success');
   };
 
   const deleteMedicine = (id: string) => {
     setMedicines((prev) => prev.filter((med) => med.id !== id));
+    // Persist to Firebase Firestore
+    deleteDoc(doc(db, 'medicines', id)).catch(() => {});
     addToast('Medicine removed from inventory', 'ঔষধটি ইনভেন্টরি থেকে মুছে ফেলা হয়েছে', 'info');
   };
 
@@ -376,6 +422,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('epharmacy_orders', JSON.stringify(orders));
   }, [orders]);
 
+  // Sync orders with Firebase Firestore
+  useEffect(() => {
+    let isSubscribed = true;
+    async function loadCloudOrders() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'orders'));
+        if (!querySnapshot.empty) {
+          const cloudOrders: Order[] = [];
+          querySnapshot.forEach((docSnap) => {
+            cloudOrders.push(docSnap.data() as Order);
+          });
+          if (isSubscribed && cloudOrders.length > 0) {
+            setOrders(cloudOrders);
+          }
+        }
+      } catch (err) {
+        console.warn('Orders Firestore read notice:', err);
+      }
+    }
+    loadCloudOrders();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
+
   const placeOrder = (orderPayload: Partial<Order>): Order => {
     const orderNum = `EPH-${Math.floor(10000 + Math.random() * 90000)}`;
     const newOrder: Order = {
@@ -455,6 +526,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveOrder(newOrder);
     clearCart();
 
+    // Persist to Firebase Firestore
+    setDoc(doc(db, 'orders', newOrder.id), newOrder).catch(() => {});
+
     // Trigger celebration confetti
     try {
       confetti({
@@ -480,6 +554,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (activeOrder && activeOrder.id === orderId) {
       setActiveOrder((prev) => (prev ? { ...prev, status, ...riderDetails } : null));
     }
+    // Persist status change to Firebase Firestore
+    updateDoc(doc(db, 'orders', orderId), { status, ...(riderDetails || {}) }).catch(() => {});
     addToast(`Order status updated to: ${status}`, `অর্ডারের অগ্রগতি আপডেট করা হয়েছে: ${status}`, 'info');
   };
 
@@ -665,6 +741,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser((prev) => ({ ...prev, role: 'admin' }));
       setActiveTab('admin_panel');
       setIsAdminLoginModalOpen(false);
+      try {
+        if (!window.location.pathname.includes('admin') && !window.location.hash.includes('admin')) {
+          window.history.pushState(null, '', '/admin');
+        }
+      } catch (e) {
+        // ignore
+      }
       addToast('Admin HQ Access Granted 🛡️', 'অ্যাডমিন একাউন্টে সফলভাবে লগইন হয়েছে 🛡️', 'success');
       return true;
     }
@@ -675,6 +758,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const lockAdmin = () => {
     setIsAdminUnlocked(false);
     setUser((prev) => ({ ...prev, role: 'customer' }));
+    try {
+      if (window.location.pathname.includes('admin') || window.location.hash.includes('admin')) {
+        window.history.pushState(null, '', '/');
+      }
+    } catch (e) {
+      // ignore
+    }
     if (activeTab === 'admin_panel') {
       setActiveTab('home');
     }

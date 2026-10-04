@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "Medicine": {
+      "title": "Medicine",
+      "description": "Pharmaceutical product in pharmacy inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "generic": { "type": "string" },
+        "strength": { "type": "string" },
+        "manufacturer": { "type": "string" },
+        "category": { "type": "string" },
+        "pricePerUnit": { "type": "number" },
+        "packPrice": { "type": "number" },
+        "unitType": { "type": "string" },
+        "requiresPrescription": { "type": "boolean" },
+        "inStock": { "type": "boolean" },
+        "stockCount": { "type": "number" },
+        "rating": { "type": "number" },
+        "image": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "pricePerUnit", "stockCount"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer medicine order record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "district": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "total": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "deliverySpeed": { "type": "string" },
+        "orderDate": { "type": "string" },
+        "isPaid": { "type": "boolean" }
+      },
+      "required": ["id", "customerName", "phone", "total", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Registered customer or admin profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "district": { "type": "string" },
+        "role": { "type": "string" },
+        "walletBalance": { "type": "number" },
+        "loyaltyPoints": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "role"]
+    }
+  },
+  "firestore": {
+    "/medicines/{medicineId}": {
+      "schema": { "$ref": "#/entities/Medicine" },
+      "description": "Live catalog and inventory of medicines"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer purchase and prescription orders"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles, roles, and eCash wallet records"
+    }
+  }
+}

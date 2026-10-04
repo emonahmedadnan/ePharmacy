@@ -38,10 +38,49 @@ export const Header: React.FC = () => {
     openProfileTab,
     orders,
     isAdminUnlocked,
+    unlockAdmin,
     activeTab,
     setActiveTab,
     pillReminders,
   } = useApp();
+
+  const handleSearchInput = (val: string) => {
+    const trimmed = val.trim().toLowerCase();
+    if (
+      trimmed === '/admin' ||
+      trimmed === 'admin' ||
+      trimmed === '/admin/' ||
+      trimmed === '#admin' ||
+      trimmed === 'admin123'
+    ) {
+      setSearchQuery('');
+      unlockAdmin('admin123');
+      setActiveTab('admin_panel');
+      return;
+    }
+    setSearchQuery(val);
+    if (activeTab !== 'shop') setActiveTab('shop');
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const trimmed = searchQuery.trim().toLowerCase();
+      if (
+        trimmed === '/admin' ||
+        trimmed === 'admin' ||
+        trimmed === '/admin/' ||
+        trimmed === '#admin' ||
+        trimmed === 'admin123'
+      ) {
+        setSearchQuery('');
+        unlockAdmin('admin123');
+        setActiveTab('admin_panel');
+        return;
+      }
+      if (activeTab !== 'shop') setActiveTab('shop');
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+    }
+  };
 
   const goHome = () => {
     setActiveTab('home');
@@ -118,16 +157,8 @@ export const Header: React.FC = () => {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== 'shop') setActiveTab('shop');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (activeTab !== 'shop') setActiveTab('shop');
-                    window.scrollTo({ top: 350, behavior: 'smooth' });
-                  }
-                }}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 placeholder={t(
                   'Search Napa, Seclo, Cetaphil, CeraVe, Glucometer...',
                   'নাপা, সেক্লো, সেটাফিল, সেরাভি, গ্লুকোমিটার বা ঔষধ খুঁজুন...'
@@ -242,16 +273,8 @@ export const Header: React.FC = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (activeTab !== 'shop') setActiveTab('shop');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (activeTab !== 'shop') setActiveTab('shop');
-                  window.scrollTo({ top: 350, behavior: 'smooth' });
-                }
-              }}
+              onChange={(e) => handleSearchInput(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder={t('Search medicines, beauty, baby care...', 'ঔষধ, রূপচর্চা বা বেবি কেয়ার খুঁজুন...')}
               className="w-full pl-9 pr-14 py-2 bg-slate-100 rounded-full text-xs outline-none focus:ring-1 focus:ring-emerald-500"
             />

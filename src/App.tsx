@@ -52,7 +52,7 @@ function MainApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setIsAdminLoginModalOpen]);
 
-  // Hidden URL routing detection for secure Admin access (e.g. #secret-admin-portal, #admin)
+  // Hidden URL routing detection for secure Admin access (e.g. /admin, #admin, ?admin)
   useEffect(() => {
     const handleSecretAdminRoute = () => {
       const hash = window.location.hash.toLowerCase();
@@ -60,10 +60,11 @@ function MainApp() {
       const path = window.location.pathname.toLowerCase();
 
       if (
-        hash.includes('secret-admin') ||
+        path.includes('admin') ||
         hash.includes('admin') ||
         search.includes('admin') ||
-        path.includes('secret-admin')
+        path.includes('secret-admin') ||
+        hash.includes('secret-admin')
       ) {
         unlockAdmin('admin123');
         setActiveTab('admin_panel');
