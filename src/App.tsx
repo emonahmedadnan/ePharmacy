@@ -23,6 +23,7 @@ import { VideoConsultationRoom } from './components/VideoConsultationRoom';
 import { ToastContainer } from './components/ToastContainer';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ShieldCheck, Lock } from 'lucide-react';
 
 function MainApp() {
@@ -66,7 +67,7 @@ function MainApp() {
         path.includes('secret-admin') ||
         hash.includes('secret-admin')
       ) {
-        unlockAdmin('admin123');
+        unlockAdmin('admin123', false);
         setActiveTab('admin_panel');
       }
     };
@@ -79,7 +80,7 @@ function MainApp() {
       window.removeEventListener('hashchange', handleSecretAdminRoute);
       window.removeEventListener('popstate', handleSecretAdminRoute);
     };
-  }, [unlockAdmin, setActiveTab]);
+  }, []); // Run on mount & history navigation only to prevent re-render cascades
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
@@ -145,8 +146,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

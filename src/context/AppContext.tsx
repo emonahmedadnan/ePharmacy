@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Medicine,
   CartItem,
@@ -22,6 +22,40 @@ import {
 import confetti from 'canvas-confetti';
 import { db } from '../firebase';
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+
+const sanitizeMedicine = (raw: any): Medicine => {
+  const fallback = INITIAL_MEDICINES.find((im) => im.id === raw?.id) || INITIAL_MEDICINES[0];
+  return {
+    id: String(raw?.id || fallback.id),
+    name: String(raw?.name || fallback.name || 'Medicine'),
+    nameBn: raw?.nameBn ? String(raw.nameBn) : fallback.nameBn,
+    generic: String(raw?.generic || fallback.generic || ''),
+    genericBn: raw?.genericBn ? String(raw.genericBn) : fallback.genericBn,
+    strength: String(raw?.strength || fallback.strength || ''),
+    category: (raw?.category || fallback.category || 'fever_pain') as Medicine['category'],
+    manufacturer: String(raw?.manufacturer || fallback.manufacturer || 'Square Pharmaceuticals Ltd.'),
+    pricePerUnit: typeof raw?.pricePerUnit === 'number' && !isNaN(raw.pricePerUnit) ? raw.pricePerUnit : fallback.pricePerUnit,
+    pricePerBox: typeof raw?.pricePerBox === 'number' && !isNaN(raw.pricePerBox) ? raw.pricePerBox : fallback.pricePerBox,
+    unitType: (raw?.unitType || fallback.unitType || 'Strip') as Medicine['unitType'],
+    unitsPerBox: typeof raw?.unitsPerBox === 'number' && !isNaN(raw.unitsPerBox) ? raw.unitsPerBox : fallback.unitsPerBox,
+    stockCount: typeof raw?.stockCount === 'number' && !isNaN(raw.stockCount) ? raw.stockCount : 100,
+    isRxRequired: Boolean(raw?.isRxRequired),
+    description: String(raw?.description || fallback.description || ''),
+    descriptionBn: String(raw?.descriptionBn || fallback.descriptionBn || ''),
+    dosageAdvice: String(raw?.dosageAdvice || fallback.dosageAdvice || ''),
+    sideEffects: String(raw?.sideEffects || fallback.sideEffects || ''),
+    image: String(raw?.image || fallback.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80'),
+    rating: typeof raw?.rating === 'number' && !isNaN(raw.rating) ? raw.rating : 4.8,
+    salesCount: typeof raw?.salesCount === 'number' && !isNaN(raw.salesCount) ? raw.salesCount : 500,
+    inStock: typeof raw?.inStock === 'boolean' ? raw.inStock : ((raw?.stockCount ?? 100) > 0),
+    discountPercentage: typeof raw?.discountPercentage === 'number' ? raw.discountPercentage : 0,
+    searchKeywords: Array.isArray(raw?.searchKeywords) ? raw.searchKeywords : (fallback.searchKeywords || []),
+  };
+};
+
+const cleanForFirestore = <T extends object>(obj: T): Record<string, any> => {
+  return JSON.parse(JSON.stringify(obj));
+};
 
 interface Toast {
   id: string;
@@ -103,7 +137,7 @@ interface AppContextType {
   setProfileInitialTab: (tab: 'profile' | 'addresses' | 'wallet' | 'orders') => void;
   openProfileTab: (tab?: 'profile' | 'addresses' | 'wallet' | 'orders') => void;
   isAdminUnlocked: boolean;
-  unlockAdmin: (pin: string) => boolean;
+  unlockAdmin: (pin: string, notify?: boolean) => boolean;
   lockAdmin: () => void;
   isAdminLoginModalOpen: boolean;
   setIsAdminLoginModalOpen: (open: boolean) => void;
@@ -238,7 +272,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!querySnapshot.empty) {
           const cloudMeds: Medicine[] = [];
           querySnapshot.forEach((docSnap) => {
-            cloudMeds.push(docSnap.data() as Medicine);
+            const data = docSnap.data();
+            if (data && data.name) {
+              cloudMeds.push(sanitizeMedicine(data));
+            }
           });
           if (isSubscribed && cloudMeds.length > 0) {
             setMedicines(cloudMeds);
@@ -246,7 +283,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else {
           // Initial population of Firestore with top essential medicines
           INITIAL_MEDICINES.slice(0, 30).forEach((med) => {
-            setDoc(doc(db, 'medicines', med.id), med).catch(() => {});
+            const cleaned = cleanForFirestore(sanitizeMedicine(med));
+            setDoc(doc(db, 'medicines', med.id), cleaned).catch(() => {});
           });
         }
       } catch (err) {
@@ -289,13 +327,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addMedicine = (newMed: Omit<Medicine, 'id'>) => {
-    const fullMed: Medicine = {
+    const fullMed: Medicine = sanitizeMedicine({
       ...newMed,
       id: `med-${Date.now()}`,
-    };
+    });
     setMedicines((prev) => [fullMed, ...prev]);
     // Persist to Firebase Firestore
-    setDoc(doc(db, 'medicines', fullMed.id), fullMed).catch(() => {});
+    setDoc(doc(db, 'medicines', fullMed.id), cleanForFirestore(fullMed)).catch(() => {});
     addToast('New medicine cataloged into inventory', 'নতুন ঔষধ ইনভেন্টরিতে যুক্ত করা হয়েছে', 'success');
   };
 
@@ -734,7 +772,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
 
-  const unlockAdmin = (pin: string) => {
+  // Toasts with duplicate suppression
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const addToast = useCallback((message: string, messageBn: string, type: Toast['type'] = 'info') => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => {
+      if (prev.some((t) => t.message === message)) return prev;
+      return [...prev, { id, message, messageBn, type }];
+    });
+    setTimeout(() => {
+      removeToast(id);
+    }, 4500);
+  }, [removeToast]);
+
+  const unlockAdmin = useCallback((pin: string, notify: boolean = true) => {
     const clean = (pin || '').trim();
     if (clean === 'admin123' || clean.toLowerCase() === 'epharmacy' || clean === '1234') {
       setIsAdminUnlocked(true);
@@ -748,14 +804,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (e) {
         // ignore
       }
-      addToast('Admin HQ Access Granted 🛡️', 'অ্যাডমিন একাউন্টে সফলভাবে লগইন হয়েছে 🛡️', 'success');
+      if (notify) {
+        addToast('Admin HQ Access Granted 🛡️', 'অ্যাডমিন একাউন্টে সফলভাবে লগইন হয়েছে 🛡️', 'success');
+      }
       return true;
     }
-    addToast('Incorrect Admin Passcode (Default: admin123)', 'ভুল অ্যাডমিন পাসকোড (ডিফল্ট: admin123)', 'error');
+    if (notify) {
+      addToast('Incorrect Admin Passcode (Default: admin123)', 'ভুল অ্যাডমিন পাসকোড (ডিফল্ট: admin123)', 'error');
+    }
     return false;
-  };
+  }, [addToast]);
 
-  const lockAdmin = () => {
+  const lockAdmin = useCallback(() => {
     setIsAdminUnlocked(false);
     setUser((prev) => ({ ...prev, role: 'customer' }));
     try {
@@ -765,26 +825,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       // ignore
     }
-    if (activeTab === 'admin_panel') {
-      setActiveTab('home');
-    }
+    setActiveTab((prev) => (prev === 'admin_panel' ? 'home' : prev));
     addToast('Admin Mode Locked', 'অ্যাডমিন মোড সুরক্ষিতভাবে লক করা হয়েছে', 'info');
-  };
-
-  // Toasts
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = (message: string, messageBn: string, type: Toast['type'] = 'info') => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { id, message, messageBn, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4500);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, [addToast]);
 
   return (
     <AppContext.Provider

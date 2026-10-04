@@ -569,28 +569,35 @@ export const HiddenAdminPanel: React.FC = () => {
 
   // Filtered Medicines
   const filteredMedicines = useMemo(() => {
-    return medicines.filter((m) => {
+    return (medicines || []).filter((m) => {
+      if (!m) return false;
+      const name = (m.name || '').toLowerCase();
+      const generic = (m.generic || '').toLowerCase();
+      const manufacturer = (m.manufacturer || '').toLowerCase();
+      const search = (stockSearch || '').toLowerCase();
+
       const matchesSearch =
-        m.name.toLowerCase().includes(stockSearch.toLowerCase()) ||
-        m.generic.toLowerCase().includes(stockSearch.toLowerCase()) ||
-        m.manufacturer.toLowerCase().includes(stockSearch.toLowerCase());
+        name.includes(search) ||
+        generic.includes(search) ||
+        manufacturer.includes(search);
 
       if (!matchesSearch) return false;
 
-      if (stockFilter === 'low') return m.stockCount > 0 && m.stockCount <= 25;
-      if (stockFilter === 'out') return m.stockCount <= 0 || !m.inStock;
-      if (stockFilter === 'in') return m.stockCount > 25;
+      const stock = typeof m.stockCount === 'number' ? m.stockCount : 0;
+      if (stockFilter === 'low') return stock > 0 && stock <= 25;
+      if (stockFilter === 'out') return stock <= 0 || !m.inStock;
+      if (stockFilter === 'in') return stock > 25;
       return true;
     });
   }, [medicines, stockSearch, stockFilter]);
 
   // Low stock counter
   const lowStockCount = useMemo(
-    () => medicines.filter((m) => m.stockCount > 0 && m.stockCount <= 25).length,
+    () => (medicines || []).filter((m) => m && typeof m.stockCount === 'number' && m.stockCount > 0 && m.stockCount <= 25).length,
     [medicines]
   );
   const outOfStockCount = useMemo(
-    () => medicines.filter((m) => m.stockCount <= 0 || !m.inStock).length,
+    () => (medicines || []).filter((m) => m && ((typeof m.stockCount === 'number' && m.stockCount <= 0) || !m.inStock)).length,
     [medicines]
   );
 
@@ -679,15 +686,15 @@ export const HiddenAdminPanel: React.FC = () => {
 
   // Global KPIs
   const totalRevenueBDT = useMemo(
-    () => orders.reduce((sum, ord) => sum + ord.total, 0),
+    () => (orders || []).reduce((sum, ord) => sum + (ord?.total || 0), 0),
     [orders]
   );
   const totalInventoryUnits = useMemo(
-    () => medicines.reduce((sum, m) => sum + m.stockCount, 0),
+    () => (medicines || []).reduce((sum, m) => sum + (m?.stockCount || 0), 0),
     [medicines]
   );
   const totalInventoryValueBDT = useMemo(
-    () => medicines.reduce((sum, m) => sum + m.stockCount * m.pricePerUnit, 0),
+    () => (medicines || []).reduce((sum, m) => sum + (m?.stockCount || 0) * (m?.pricePerUnit || 0), 0),
     [medicines]
   );
   const estimatedProfit = useMemo(
